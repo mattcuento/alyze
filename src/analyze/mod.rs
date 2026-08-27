@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{borrow::Cow, ops::Range};
 
 use crate::{
     analyze::stemming_cache::{CachedToken, StemmingCache, StemmingCacheEntry},
@@ -74,6 +74,7 @@ pub enum StemmingLanguage {
     Hungarian,
     Italian,
     Norwegian,
+    Polish,
     Portuguese,
     Romanian,
     Russian,
@@ -83,9 +84,17 @@ pub enum StemmingLanguage {
     Turkish,
 }
 
-impl Into<rust_stemmers::Algorithm> for StemmingLanguage {
-    fn into(self) -> rust_stemmers::Algorithm {
-        match self {
+enum Stemmer {
+    RustStemmers(rust_stemmers::Stemmer),
+    Frostem(frostem::Stemmer),
+}
+
+impl Stemmer {
+    fn new(language: StemmingLanguage) -> Self {
+        let algorithm = match language {
+            StemmingLanguage::Polish => {
+                return Self::Frostem(frostem::Stemmer::new(frostem::Algorithm::Polish));
+            }
             StemmingLanguage::Arabic => rust_stemmers::Algorithm::Arabic,
             StemmingLanguage::Danish => rust_stemmers::Algorithm::Danish,
             StemmingLanguage::Dutch => rust_stemmers::Algorithm::Dutch,
@@ -104,6 +113,14 @@ impl Into<rust_stemmers::Algorithm> for StemmingLanguage {
             StemmingLanguage::Swedish => rust_stemmers::Algorithm::Swedish,
             StemmingLanguage::Tamil => rust_stemmers::Algorithm::Tamil,
             StemmingLanguage::Turkish => rust_stemmers::Algorithm::Turkish,
+        };
+        Self::RustStemmers(rust_stemmers::Stemmer::create(algorithm))
+    }
+
+    fn stem<'a>(&self, input: &'a str) -> Cow<'a, str> {
+        match self {
+            Self::RustStemmers(stemmer) => stemmer.stem(input),
+            Self::Frostem(stemmer) => stemmer.stem(input),
         }
     }
 }
@@ -173,10 +190,7 @@ impl Analyzer {
             stemming_cache,
         } = buffer;
 
-        let stemmer = self.options.stemming.map(|stemming_language| {
-            let algorithm = stemming_language.into();
-            rust_stemmers::Stemmer::create(algorithm)
-        });
+        let stemmer = self.options.stemming.map(Stemmer::new);
 
         // Monotonic across all inputs. Every word-like token consumes
         // a position, even if a downstream filter (length, stopword) drops it,
@@ -362,7 +376,7 @@ impl InputRefOrBuffered<'_, '_> {
 
     fn stem_in_place(
         &mut self,
-        stemmer: &rust_stemmers::Stemmer,
+        stemmer: &Stemmer,
         cache: &mut StemmingCache,
         scratch: &mut String,
     ) {
@@ -543,6 +557,26 @@ mod tests {
         let tokens = collect(o, input);
         assert_eq!(tokens[0].text, "run");
         assert_eq!(&input[tokens[0].byte_range.clone()], "running");
+    }
+
+    #[test]
+    fn polish_stemming_applies_in_analyzer() {
+        let mut o = opts();
+        o.stemming = Some(StemmingLanguage::Polish);
+        let tokens = collect(o, "cieszyć");
+        assert_eq!(tokens[0].text, "cieszyc");
+    }
+
+    #[test]
+    fn existing_languages_keep_rust_stemmers() {
+        assert!(matches!(
+            Stemmer::new(StemmingLanguage::English),
+            Stemmer::RustStemmers(_)
+        ));
+        assert!(matches!(
+            Stemmer::new(StemmingLanguage::Polish),
+            Stemmer::Frostem(_)
+        ));
     }
 
     #[test]

@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/turbopuffer/alyze"
 keywords = ["tokenizer", "unicode", "segmentation", "analysis", "nlp"]
 categories = ["text-processing", "internationalization"]
-exclude = ["testdata/", "benches/"]
+exclude = ["testdata/SentenceBreakTest.txt", "testdata/WordBreakTest.txt", "benches/"]
 
 # `alyze-features` is a separate, Apache-2.0 crate (the rest of `alyze` is MIT). It is a workspace
 # member, lives in this repo, and is not published.
@@ -17,6 +17,7 @@ members = ["wasm", "alyze-features"]
 
 [dependencies]
 ahash = "0.8.12"
+frostem = { version = "1.20260821", default-features = false, features = ["polish"] }
 phf = { version = "0.13.1", features = ["macros"] }
 rust-stemmers = "1.2.0"
 tpuf_icu_properties_211 = "7"

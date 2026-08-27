@@ -184,6 +184,7 @@ fn stemming_language(language: &str) -> Option<StemmingLanguage> {
         "hungarian" => StemmingLanguage::Hungarian,
         "italian" => StemmingLanguage::Italian,
         "norwegian" => StemmingLanguage::Norwegian,
+        "polish" => StemmingLanguage::Polish,
         "portuguese" => StemmingLanguage::Portuguese,
         "romanian" => StemmingLanguage::Romanian,
         "russian" => StemmingLanguage::Russian,

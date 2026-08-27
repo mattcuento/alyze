@@ -1,5 +1,10 @@
 # Changelog
 
+## August 27, 2026
+
+- `analyze`: add Polish stemming through `frostem` without changing the existing stemming
+  algorithms.
+
 ## June 18, 2026
 
 - `analyze`: add `Token::byte_range` and `Token::input_index` to recover a token's raw source substring
