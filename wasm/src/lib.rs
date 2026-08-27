@@ -207,6 +207,7 @@ fn build_options(options: &Options) -> Result<AnalysisOptions, JsValue> {
 /// (stemming/stopwords) are derived from the mapping functions below.
 const LANGUAGES: &[(&str, &str)] = &[
     ("arabic", "Arabic"),
+    ("czech", "Czech"),
     ("danish", "Danish"),
     ("dutch", "Dutch"),
     ("english", "English"),
@@ -230,6 +231,7 @@ const LANGUAGES: &[(&str, &str)] = &[
 fn stemming_language(language: &str) -> Option<StemmingLanguage> {
     Some(match language {
         "arabic" => StemmingLanguage::Arabic,
+        "czech" => StemmingLanguage::Czech,
         "danish" => StemmingLanguage::Danish,
         "dutch" => StemmingLanguage::Dutch,
         "english" => StemmingLanguage::English,

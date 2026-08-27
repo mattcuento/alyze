@@ -174,6 +174,7 @@ fn build_options(
 fn stemming_language(language: &str) -> Option<StemmingLanguage> {
     Some(match language {
         "arabic" => StemmingLanguage::Arabic,
+        "czech" => StemmingLanguage::Czech,
         "danish" => StemmingLanguage::Danish,
         "dutch" => StemmingLanguage::Dutch,
         "english" => StemmingLanguage::English,

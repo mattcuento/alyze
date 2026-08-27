@@ -20,6 +20,7 @@ name = "alyze"
 version = "0.1.5"
 dependencies = [
  "ahash",
+ "frostem",
  "phf",
  "rust-stemmers",
  "tpuf_icu_properties_211",
@@ -63,6 +64,12 @@ name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
+
+[[package]]
+name = "frostem"
+version = "1.20260821.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08ed6437a2ed7fc408115e25cdb41e15ba4b17742a4c8d3d1b5276fe9b687209"
 
 [[package]]
 name = "getrandom"

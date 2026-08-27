@@ -49,3 +49,6 @@ workspace.
 from [Vespa](https://github.com/vespa-engine/vespa), Copyright Vespa.ai) — see
 [`alyze-features/`](alyze-features/) for details. With gratitude to the Vespa team for their
 excellent, well-documented work.
+
+Czech stemming comes from the [Snowball](https://snowballstem.org/) project via
+[`frostem`](https://github.com/Xuanwo/frostem), which is BSD-3-Clause licensed.
