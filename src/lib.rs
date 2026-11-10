@@ -12,6 +12,7 @@
 //! ```
 
 pub mod analyze;
+pub mod fuzzy;
 pub mod uax29;
 
 /// CJK (Chinese, Japanese, Korean) analysis. Requires `smartcn`, `nori`, or `kuromoji` (or `cjk` for all three).

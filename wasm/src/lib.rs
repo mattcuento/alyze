@@ -129,6 +129,128 @@ pub fn sentences(text: &str) -> Result<JsValue, JsValue> {
     serde_wasm_bindgen::to_value(&ranges).map_err(|e| js_error(&e.to_string()))
 }
 
+/// Segment text into word-like tokens without applying analyzer filters.
+#[wasm_bindgen]
+pub fn words(text: &str) -> Result<JsValue, JsValue> {
+    let mut ranges = Vec::new();
+    let mut prev = 0;
+    uax29::word::tokenize(text, uax29::word::Options::default(), |end, props| {
+        if props.is_word_like() {
+            ranges.push(SentenceRange { start: prev, end });
+        }
+        prev = end;
+        true
+    });
+    serde_wasm_bindgen::to_value(&ranges).map_err(|e| js_error(&e.to_string()))
+}
+
+#[derive(Default, Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+enum FuzzyAnchor {
+    #[default]
+    None,
+    Start,
+    End,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FuzzyThreshold {
+    min_query_chars: usize,
+    distance: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FuzzyOptions {
+    max_edit_distance: Vec<FuzzyThreshold>,
+    #[serde(default)]
+    anchor: FuzzyAnchor,
+    #[serde(default = "default_case_sensitive")]
+    case_sensitive: bool,
+}
+
+fn default_case_sensitive() -> bool {
+    true
+}
+
+impl FuzzyOptions {
+    fn edit_distance(&self, pattern_len: usize) -> Result<Option<usize>, String> {
+        if self.max_edit_distance.is_empty() {
+            return Err(
+                "Fuzzy filter requires at least one max_edit_distance threshold".to_string(),
+            );
+        }
+        for pair in self.max_edit_distance.windows(2) {
+            if pair[0].min_query_chars == pair[1].min_query_chars {
+                return Err(
+                    "Fuzzy filter max_edit_distance min_query_chars values must be unique"
+                        .to_string(),
+                );
+            }
+            if pair[0].min_query_chars > pair[1].min_query_chars {
+                return Err(
+                    "Fuzzy filter max_edit_distance thresholds must be sorted by min_query_chars"
+                        .to_string(),
+                );
+            }
+        }
+        let marker_bonus = match self.anchor {
+            FuzzyAnchor::None => 0,
+            FuzzyAnchor::Start | FuzzyAnchor::End => 1,
+        };
+        for threshold in &self.max_edit_distance {
+            if threshold.distance > 2 {
+                return Err("Fuzzy filter supports distance values up to 2".to_string());
+            }
+            let min_chars = 3 * threshold.distance + 3 - marker_bonus;
+            if threshold.min_query_chars < min_chars {
+                return Err(format!(
+                    "Fuzzy filter min_query_chars {} is too short for distance {}",
+                    threshold.min_query_chars, threshold.distance
+                ));
+            }
+        }
+        Ok(self
+            .max_edit_distance
+            .iter()
+            .rev()
+            .find(|threshold| pattern_len >= threshold.min_query_chars)
+            .map(|threshold| threshold.distance))
+    }
+}
+
+/// Locate fuzzy matches using the server's range-selection rules and UTF-8 offsets.
+/// `options` accepts the same thresholds, anchoring, and case sensitivity as Fuzzy clauses.
+#[wasm_bindgen]
+pub fn fuzzy_match_ranges(text: &str, pattern: &str, options: JsValue) -> Result<JsValue, JsValue> {
+    let options: FuzzyOptions =
+        serde_wasm_bindgen::from_value(options).map_err(|e| js_error(&e.to_string()))?;
+    let pattern: Vec<char> = pattern.chars().collect();
+    let distance = options
+        .edit_distance(pattern.len())
+        .map_err(|e| js_error(&e))?;
+    let ranges: Vec<SentenceRange> = match distance {
+        None => Vec::new(),
+        Some(distance) => {
+            let anchor = match options.anchor {
+                FuzzyAnchor::None => alyze::fuzzy::Anchor::None,
+                FuzzyAnchor::Start => alyze::fuzzy::Anchor::Start,
+                FuzzyAnchor::End => alyze::fuzzy::Anchor::End,
+            };
+            alyze::fuzzy::Matcher::new(&pattern, anchor, distance, options.case_sensitive)
+                .find_match_ranges(text)
+                .into_iter()
+                .map(|range| SentenceRange {
+                    start: range.start,
+                    end: range.end,
+                })
+                .collect()
+        }
+    };
+    serde_wasm_bindgen::to_value(&ranges).map_err(|e| js_error(&e.to_string()))
+}
+
 /// Returns the supported languages and whether each supports stemming and/or
 /// stopword removal.
 #[wasm_bindgen]
